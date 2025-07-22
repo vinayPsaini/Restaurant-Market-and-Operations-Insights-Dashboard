@@ -1,0 +1,8 @@
+Average Cost for Two = COALESCE(DIVIDE(SUM(Cleaned_Zomato[Cost_For_Two]),COUNTROWS(Cleaned_Zomato)),0) 
+
+Online Orders Percent = COALESCE(DIVIDE(COUNTROWS(FILTER(Cleaned_Zomato,Cleaned_Zomato[Online_Order]="Yes")),COUNTROWS(Cleaned_Zomato)),0)
+
+Table Booking Percent = COALESCE(DIVIDE(COUNTROWS(FILTER(Cleaned_Zomato,Cleaned_Zomato[Table_Booking]="Yes")),COUNTROWS(Cleaned_Zomato)),0)
+
+Total Restraunts = COALESCE(COUNTROWS(Cleaned_Zomato),0)
+

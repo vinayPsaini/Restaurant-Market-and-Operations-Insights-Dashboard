@@ -1,0 +1,37 @@
+let
+    Source = Csv.Document(File.Contents("F:\Portfolio Projects\Zomato Insights for Restaurant Owners\Cleaned_Zomato.csv"),[Delimiter=",", Columns=12, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Address", type text}, {"Restaurant_Name", type text}, {"Online_Order", type text}, {"Table_Booking", type text}, {"Rating", type number}, {"Votes", Int64.Type}, {"Location", type text}, {"Restaurant_Type", type text}, {"Cuisines", type text}, {"Cost_For_Two", Int64.Type}, {"Category", type text}, {"City", type text}}),
+    #"Filtered Rows" = Table.SelectRows(#"Changed Type", each true),
+    #"Sorted Rows" = Table.Sort(#"Filtered Rows",{{"Address", Order.Ascending}}),
+    #"Removed Duplicates" = Table.Distinct(#"Sorted Rows", {"Address", "Restaurant_Name"}),
+    #"Replaced Value" = Table.ReplaceValue(#"Removed Duplicates","","Others",Replacer.ReplaceValue,{"Restaurant_Type"}),
+    #"Filtered Rows1" = Table.SelectRows(#"Replaced Value", each true),
+    #"Added Custom" = Table.AddColumn(#"Filtered Rows1", "FIrst Cuisine", each Text.BeforeDelimiter([Cuisines],",")),
+    #"Trimmed Text" = Table.TransformColumns(#"Added Custom",{{"FIrst Cuisine", Text.Trim, type text}}),
+    #"Added Custom1" = Table.AddColumn(#"Trimmed Text", "Rating Bucket", each if [Rating] <2 then "Poor"
+else if [Rating] <3 then "Average"
+else if [Rating] <4 then "Good"
+else "Excellent"),
+    #"Added Custom2" = Table.AddColumn(#"Added Custom1", "Cost Bucket", each if [Cost_For_Two] <300 then "Budget(<300)"
+else if [Cost_For_Two]< 800 then "Affordable(300-800)"
+else if [Cost_For_Two]< 1500 then "Mid range(800-1500)"
+else if [Cost_For_Two]< 2500 then "Expensive(1500-2500)"
+else "Luxury(>2500)"),
+    #"Inserted Text Before Delimiter" = Table.AddColumn(#"Added Custom2", "Text Before Delimiter", each Text.BeforeDelimiter([Restaurant_Type], ","), type text),
+    #"Renamed Columns" = Table.RenameColumns(#"Inserted Text Before Delimiter",{{"Text Before Delimiter", "Restraunt Domain"}}),
+    #"Reordered Columns" = Table.ReorderColumns(#"Renamed Columns",{"Address", "Restaurant_Name", "Online_Order", "Table_Booking", "Rating", "Votes", "Location", "Restaurant_Type", "Restraunt Domain", "Cuisines", "FIrst Cuisine", "Cost_For_Two", "Category", "City", "Rating Bucket", "Cost Bucket"}),
+    #"Added Custom3" = Table.AddColumn(#"Reordered Columns", "Corrupted Name", each if Text.Contains([Restaurant_Name], "Ã") 
+then "corrupted"
+else "cleaned"),
+    #"Added Custom4" = Table.AddColumn(#"Added Custom3", "Clean Restraunt Name", each Text.Proper(Text.Trim(
+    Text.Select([Restaurant_Name], {"A".."Z", "a".."z", "0".."9", " ", "&", "'", ".", "-", ","})
+))),
+    #"Filtered Rows2" = Table.SelectRows(#"Added Custom4", each true),
+    #"Reordered Columns1" = Table.ReorderColumns(#"Filtered Rows2",{"Address", "Restaurant_Name", "Online_Order", "Table_Booking", "Rating", "Votes", "Location", "Restaurant_Type", "Restraunt Domain", "Cuisines", "FIrst Cuisine", "Cost_For_Two", "Clean Restraunt Name", "Category", "City", "Rating Bucket", "Cost Bucket", "Corrupted Name"}),
+    #"Removed Columns" = Table.RemoveColumns(#"Reordered Columns1",{"Corrupted Name"}),
+    #"Reordered Columns2" = Table.ReorderColumns(#"Removed Columns",{"Address", "Restaurant_Name", "Clean Restraunt Name", "Online_Order", "Table_Booking", "Rating", "Votes", "Location", "Restaurant_Type", "Restraunt Domain", "Cuisines", "FIrst Cuisine", "Cost_For_Two", "Category", "City", "Rating Bucket", "Cost Bucket"}),
+    #"Removed Columns1" = Table.RemoveColumns(#"Reordered Columns2",{"Restaurant_Name"}),
+    #"Renamed Columns1" = Table.RenameColumns(#"Removed Columns1",{{"Clean Restraunt Name", "Restraunt Name"}, {"Cuisines", "Cuisines Group"}, {"FIrst Cuisine", "Cuisine"}, {"Cost Bucket", "Price Bracket"}, {"Rating Bucket", "Rating Bracket"}})
+in
+    #"Renamed Columns1"
